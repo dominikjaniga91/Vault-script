@@ -1,12 +1,12 @@
 #!/bin/bash
 
+source_tab=()
 
 echo "Provide source directory:"
 read source_dir
 echo "Provide destination directory:"
 read dest_dir
 
-tests="test"
 function get_function() {
 
   files=$(vault kv list $1)
@@ -25,20 +25,14 @@ function get_function() {
   done
 }
 
-source_tab=()
 
 get_function $source_dir
 
-echo "${#source_tab[@]}"
-
-for i in ${source_tab}
-do
-  echo $i
-done
-
 echo "Secrets from destination directory"
 
-function validation() {
+dest_tab=()
+
+function get_destination_secrets() {
 
   files=$(vault kv list $1)
   for file in $files
@@ -46,27 +40,18 @@ function validation() {
     if [[ "$file" == */ ]];  then
       validation ${1}$file
     elif [[ "$file" != "Keys" && "$file" != "----" ]]; then
-      echo "${1}$file"
-      dest_tab=(${dest_tab[@]} ${1}$file)
+      dest_tab=(${dest_tab[@]} $1$file)
     fi
   done
 }
 
-dest_tab=()
-
-validation $dest_dir
-
-echo "Number of secrets in source directory: ${#source_tab[@]}"
-
-echo "Number of secrets in destination directory: ${#dest_tab[@]}"
-
+get_destination_secrets $dest_dir
 
 if [[ ${#source_tab[@]} == ${#dest_tab[@]} ]]; then
   echo "Number of secrets is correct ${#source_tab[@]}"
 else
-  echo "Number of secrets is incorect"
+  echo "Number of secrets is incorect. Source: ${#source_tab[@]}, destination: ${#dest_tab[@]}"
 fi
-
 
 function compare_json() {
 
@@ -79,11 +64,12 @@ function compare_json() {
       echo "Equals"
     else
       echo "Not equals"
+      echo "Source: "
       vault kv get -format=json ${source_tab[i]}
+      echo "Destination: "
       vault kv get -format=json ${dest_tab[i]}
     fi
   done
-
 } 
 
 compare_json
