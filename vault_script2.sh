@@ -38,7 +38,7 @@ function get_destination_secrets() {
   for file in $files
   do
     if [[ "$file" == */ ]];  then
-      validation ${1}$file
+      get_destination_secrets ${1}$file
     elif [[ "$file" != "Keys" && "$file" != "----" ]]; then
       dest_tab=(${dest_tab[@]} $1$file)
     fi
@@ -54,6 +54,8 @@ else
 fi
 
 function compare_json() {
+  
+  equals=0
 
   for ((i = 0; i < ${#source_tab[@]}; ++i));
   do
@@ -61,7 +63,7 @@ function compare_json() {
     vault kv get -format=json ${dest_tab[i]} | jq '.data."data"' > dst.json
     diff=$(diff <(jq -S . src.json) <(jq -S . dst.json))
     if [[ $diff == "" ]]; then
-      echo "Equals"
+      equals=$((equals+1))
     else
       echo "Not equals"
       echo "Source: "
@@ -69,7 +71,11 @@ function compare_json() {
       echo "Destination: "
       vault kv get -format=json ${dest_tab[i]}
     fi
+
   done
+  if [[ $equals == ${#source_tab[@]} ]]; then
+    echo "All secrets equals"
+  fi
 } 
 
 compare_json
